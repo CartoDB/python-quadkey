@@ -42,7 +42,7 @@ Functions to handle tiles (defined by a quadint value and a zoom level)
 * Input: quadint value and zoom level
 * Output: bounding box defined by minimum longitude, minimum latitude, maximum longitude and maximum latitude (WGS84)
 
-`tile2webmercatorbbox(quadint, zoom)`
+`tile2bbox_webmercator(quadint, zoom)`
 
 * Input: quadint value and zoom level
 * Output: bounding box defined by minimum x, minimum y, maximum x, maximum y (Web Mercator)
@@ -52,7 +52,7 @@ Functions to handle tiles (defined by a quadint value and a zoom level)
 * Input: quadint value and zoom level
 * Output: longitude and latitude of the tile center (WGS84)
 
-`tile_webmercatorcenter(quadint, zoom)`
+`tile_center_webmercator(quadint, zoom)`
 
 * Input: quadint value and zoom level
 * Output: longitude and latitude of the tile center (Webmercator)
