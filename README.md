@@ -28,8 +28,6 @@ The fast technique for quadkey encodig/decoding is taken from https://github.com
 * Input:  web mercator coordinates (SRID 3857)
 * Output: quadint value
 
-### TODO
-
 Functions to handle tiles (defined by a quadint value and a zoom level)
 
 `tile2range(quadint, zoom)`
@@ -57,12 +55,24 @@ Functions to handle tiles (defined by a quadint value and a zoom level)
 * Input: quadint value and zoom level
 * Output: longitude and latitude of the tile center (Webmercator)
 
-`tile_mask(quadint, zoom)`
-
-* Input: quadint value and zoom level
-* Output: quadint mask to select the tile
-
 `tile_children(quadint, zoom)`
 
 * Input: quadint value and zoom level
 * Output: quadint values of the 4 children of the tile of level zoom+1
+
+`tile_mask(quadint, zoom)`
+
+* Input: zoom level
+* Output: quadint mask to select tiles of the level (with bitwise AND)
+
+Conversion of tile representation between quadint, zoom and x, y zoom:
+
+`xyz2quadint(x, y, zoom)`
+
+* Input: x, y, z coordinates of the tile
+* Output: quadint value of the tile
+
+`tile2xyz(quadint, zoom)`
+
+* Input: quadint value and zoom level
+* Output: x, y, z of the tile
