@@ -257,9 +257,9 @@ void tile_children(uint64 quadint, int zoom, uint64* q_sw, uint64* q_nw, uint64*
 {
     int bit = ((MAX_ZOOM - zoom) << 1);
     *q_sw = quadint & tile_prefix_mask(zoom);
-    *q_nw = *q_sw | (1 << (bit - 2));
-    *q_se = *q_sw | (1 << (bit - 1));
-    *q_ne = *q_se | (1 << (bit - 2));
+    *q_nw = *q_sw | (1ull << (bit - 2));
+    *q_se = *q_sw | (1ull << (bit - 1));
+    *q_ne = *q_se | (1ull << (bit - 2));
 }
 
 uint64 xyz2quadint(uint32 x, uint32 y, int zoom) {
