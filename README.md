@@ -76,3 +76,8 @@ Conversion of tile representation between quadint, zoom and x, y zoom:
 
 * Input: quadint value and zoom level
 * Output: x, y, z of the tile
+
+Obtaning the list of tiles that intersect a web mercator rectangle,
+given a maximum tile zoom level.
+
+`tiles_intersecting_webmercator_box(xmin, ymin, xmax, ymax, max_zoom)``

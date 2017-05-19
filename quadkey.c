@@ -275,6 +275,67 @@ void tile2xy(uint64 quadint, int zoom, uint32* x, uint32* y) {
   *y = qy >> bits;
 }
 
+double box_area(double xmin, double ymin, double xmax, double ymax) {
+    double w = xmax - xmin;
+    double h = ymax - ymin;
+    return (w > 0) && (h > 0) ? w*h : 0.0;
+}
+
+double box_intersection_area(double xmin1, double ymin1, double xmax1, double ymax1, double xmin2, double ymin2, double xmax2, double ymax2) {
+    return box_area(MAX(xmin1, xmin2), MAX(ymin1, ymin2), MIN(xmax1, xmax2), MIN(ymax1, ymax2));
+}
+
+static void append_tile(PyObject* list, uint64 quadint, int zoom) {
+    PyList_Append(list, Py_BuildValue("Ki", quadint, zoom));
+}
+
+void tiles_intersecting_webmercator_box(PyObject* result, double xmin, double ymin, double xmax, double ymax, uint64 quadint, int zoom, int max_zoom) {
+    double tile_xmin, tile_ymin, tile_xmax, tile_ymax;
+    double int_area;
+    double tile_area;
+    double area_tol = 42.0 / (1ull << (max_zoom + 1));
+    tile2bbox_webmercator(quadint, zoom, &tile_xmin, &tile_ymin, &tile_xmax, &tile_ymax);
+
+    int_area = box_intersection_area(xmin, ymin, xmax, ymax, tile_xmin, tile_ymin, tile_xmax, tile_ymax);
+    if (int_area > 0) {
+        tile_area = box_area(tile_xmin, tile_ymin, tile_xmax, tile_ymax);
+        if (int_area - tile_area >= -area_tol) {
+            /* the box contains the tile; add the tile to the results */
+            append_tile(result, quadint, zoom);
+        } else if (zoom == max_zoom) {
+            if (int_area >= 0.5*tile_area) {
+                /* large intersection; add the tile to the results */
+                append_tile(result, quadint, zoom);
+            } else {
+                /* small intersection */
+            }
+        } else {
+            /* Drill down to next level */
+            uint64 child_sw, child_nw, child_se, child_ne;
+            tile_children(quadint, zoom, &child_sw, &child_nw, &child_se, &child_ne);
+            tiles_intersecting_webmercator_box(result, xmin, ymin, xmax, ymax, child_sw, zoom + 1, max_zoom);
+            tiles_intersecting_webmercator_box(result, xmin, ymin, xmax, ymax, child_nw, zoom + 1, max_zoom);
+            tiles_intersecting_webmercator_box(result, xmin, ymin, xmax, ymax, child_se, zoom + 1, max_zoom);
+            tiles_intersecting_webmercator_box(result, xmin, ymin, xmax, ymax, child_ne, zoom + 1, max_zoom);
+        }
+    } else {
+        /* No intersection */
+    }
+}
+
+static PyObject* tiles_intersecting_webmercator_box_py(PyObject* self, PyObject* args)
+{
+    double xmin, ymin, xmax, ymax;
+    int max_zoom;
+
+    if (!PyArg_ParseTuple(args, "ddddi", &xmin, &ymin, &xmax, &ymax, &max_zoom))
+        return NULL;
+
+    PyObject* result = PyList_New(0);
+    tiles_intersecting_webmercator_box(result, xmin, ymin, xmax, ymax, 0, 0, max_zoom);
+    return result;
+}
+
 /*
  Input:  integer x y coordinates based on WebMercator in the range [0,2^31)
  Output: 62-bit quadkey value
@@ -512,6 +573,7 @@ static PyMethodDef QuadkeyMethods[] =
      {"tile_children", tile_children_py, METH_VARARGS, "tile_children"},
      {"xyz2quadint", xyz2quadint_py, METH_VARARGS, "xyz2quadint"},
      {"tile2xyz", tile2xyz_py, METH_VARARGS, "tile2xyz"},
+     {"tiles_intersecting_webmercator_box", tiles_intersecting_webmercator_box_py, METH_VARARGS, "tiles_intersecting_webmercator_box"},
      {NULL, NULL, 0, NULL}
 };
 
