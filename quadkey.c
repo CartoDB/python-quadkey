@@ -403,6 +403,25 @@ lonlat2quadint_py(PyObject* self, PyObject* args)
 }
 
 /*
+ Input: longitude, latitude in WGS84 (SRID 4326) coordinates in degrees
+ Output: 62-bit quadkey value, x, y (in mercator projection)
+*/
+static PyObject*
+lonlat2quadintxy_py(PyObject* self, PyObject* args)
+{
+    double lon, lat;
+    uint32 x, y;
+
+    if (!PyArg_ParseTuple(args, "dd", &lon, &lat))
+        return NULL;
+
+    lonlat2xy(lon, lat, MAX_ZOOM, &x, &y);
+
+    return Py_BuildValue("KII", xy2quadint(x, y), x, y);
+}
+
+
+/*
  Input:  web mercator coordinates (SRID 3857)
  Output: 62-bit quadkey value
 */
@@ -557,6 +576,19 @@ tile2xyz_py(PyObject* self, PyObject* args)
     return Py_BuildValue("IIi", x, y, zoom);
 }
 
+static PyObject*
+lonlat2xy_py(PyObject* self, PyObject* args)
+{
+    double lat, lon;
+    uint32 x, y;
+
+    if (!PyArg_ParseTuple(args, "dd", &lon, &lat))
+        return NULL;
+
+    lonlat2xy(lon, lat, MAX_ZOOM, &x, &y);
+    return Py_BuildValue("II", x, y);
+}
+
 static PyMethodDef QuadkeyMethods[] =
 {
      {"xy2quadint", xy2quadint_py, METH_VARARGS, "xy2quadint_py"},
@@ -574,6 +606,8 @@ static PyMethodDef QuadkeyMethods[] =
      {"xyz2quadint", xyz2quadint_py, METH_VARARGS, "xyz2quadint"},
      {"tile2xyz", tile2xyz_py, METH_VARARGS, "tile2xyz"},
      {"tiles_intersecting_webmercator_box", tiles_intersecting_webmercator_box_py, METH_VARARGS, "tiles_intersecting_webmercator_box"},
+     {"lonlat2xy", lonlat2xy_py, METH_VARARGS, "lonlat2xy"},
+     {"lonlat2quadintxy", lonlat2quadintxy_py, METH_VARARGS, "lonlat2quadintxy"},
      {NULL, NULL, 0, NULL}
 };
 
