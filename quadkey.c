@@ -328,7 +328,7 @@ static PyObject* tiles_intersecting_webmercator_box_py(PyObject* self, PyObject*
     double xmin, ymin, xmax, ymax;
     int max_zoom;
 
-    if (!PyArg_ParseTuple(args, "ddddi", &xmin, &ymin, &xmax, &ymax, &max_zoom))
+    if (!PyArg_ParseTuple(args, "idddd", &max_zoom, &xmin, &ymin, &xmax, &ymax))
         return NULL;
 
     PyObject* result = PyList_New(0);
