@@ -345,6 +345,20 @@ static PyObject* tiles_intersecting_webmercator_box_py(PyObject* self, PyObject*
     return result;
 }
 
+static PyObject* approximate_box_by_tiles_py(PyObject* self, PyObject* args)
+{
+    double xmin, ymin, xmax, ymax;
+    int max_zoom;
+
+    if (!PyArg_ParseTuple(args, "idddd", &max_zoom, &xmin, &ymin, &xmax, &ymax))
+        return NULL;
+
+    PyObject* result = PyList_New(0);
+    tiles_intersecting_webmercator_box(result, xmin, ymin, xmax, ymax, 0, 0, max_zoom, 2);
+    return result;
+}
+
+
 /*
  Input:  integer x y coordinates based on WebMercator in the range [0,2^31)
  Output: 62-bit quadkey value
@@ -615,6 +629,7 @@ static PyMethodDef QuadkeyMethods[] =
      {"xyz2quadint", xyz2quadint_py, METH_VARARGS, "xyz2quadint"},
      {"tile2xyz", tile2xyz_py, METH_VARARGS, "tile2xyz"},
      {"tiles_intersecting_webmercator_box", tiles_intersecting_webmercator_box_py, METH_VARARGS, "tiles_intersecting_webmercator_box"},
+     {"approximate_box_by_tiles", approximate_box_by_tiles_py, METH_VARARGS, "approximate_box_by_tiles"},
      {"lonlat2xy", lonlat2xy_py, METH_VARARGS, "lonlat2xy"},
      {"lonlat2quadintxy", lonlat2quadintxy_py, METH_VARARGS, "lonlat2quadintxy"},
      {NULL, NULL, 0, NULL}
