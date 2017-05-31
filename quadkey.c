@@ -293,12 +293,11 @@ static void append_tile(PyObject* list, uint64 quadint, int zoom) {
  * Approximate the area of a bounding box with tiles while limiting the error (as an area ratio)
 */
 PyObject* adaptive_tiling(double xmin, double ymin, double xmax, double ymax, double max_error) {
-    /* This is function is slow due to the usage of Python lists as intermediate storage */
+    static const size_t buffer_size = 10000;
+    static uint64 buffer[buffer_size];
+
     PyObject* tiles = PyList_New(0);
-    PyObject* next_candidates;
-    PyObject* candidate_tiles = PyList_New(0);
-    Py_ssize_t n, i;
-    PyObject* tile;
+    Py_ssize_t i;
     uint64 tile_quadint;
     double tile_xmin, tile_ymin, tile_xmax, tile_ymax;
     uint64 q_sw, q_nw, q_se, q_ne;
@@ -308,40 +307,50 @@ PyObject* adaptive_tiling(double xmin, double ymin, double xmax, double ymax, do
 
     area = box_area(xmin, ymin, xmax, ymax);
 
+    size_t candidate_tiles; /* position of candidates in the buffer */
+    size_t next_candidates; /* position of next zoom level candidates */
+    Py_ssize_t n_candidate_tiles, n_next_candidates; /* candidate counters */
+
+    /* Start with the root tile as the only candidate */
     zoom = 0;
-    PyList_Append(candidate_tiles, Py_BuildValue("K", 0ull));
+    candidate_tiles = 0;
+    buffer[candidate_tiles] = 0ull;
+    n_candidate_tiles = 1;
 
     for (;;) {
-       next_candidates = PyList_New(0);
-       n = PyList_Size(candidate_tiles);
+       next_candidates = (candidate_tiles + n_candidate_tiles) % buffer_size;
+       n_next_candidates = 0;
 
-       for (i = 0; i < n; i++) {
-         tile = PyList_GetItem(candidate_tiles, i);
-         PyArg_Parse(tile, "K", &tile_quadint);
-
+       for (i = 0; i < n_candidate_tiles; i++) {
+         tile_quadint = buffer[(candidate_tiles + i) % buffer_size];
          tile2bbox_webmercator(tile_quadint, zoom, &tile_xmin, &tile_ymin, &tile_xmax, &tile_ymax);
          int_area = box_intersection_area(xmin, ymin, xmax, ymax, tile_xmin, tile_ymin, tile_xmax, tile_ymax);
          tile_area = box_area(tile_xmin, tile_ymin, tile_xmax, tile_ymax);
          if (fabs(int_area - tile_area)/tile_area < max_error) {
+             /* add the candidate tile to the results */
              total_area += tile_area;
              append_tile(tiles, tile_quadint, zoom);
          } else if (int_area > 0 && zoom < MAX_ZOOM) {
+             /* schedule the tile children as next-level candidates  */
              tile_children(tile_quadint, zoom, &q_sw, &q_nw, &q_se, &q_ne);
-             PyList_Append(next_candidates, Py_BuildValue("K", q_sw));
-             PyList_Append(next_candidates, Py_BuildValue("K", q_nw));
-             PyList_Append(next_candidates, Py_BuildValue("K", q_se));
-             PyList_Append(next_candidates, Py_BuildValue("K", q_ne));
+             if (n_candidate_tiles + n_next_candidates + 4 >= buffer_size) {
+               break; // buffer full; TODO: report error properly
+             }
+             buffer[(next_candidates + n_next_candidates++) % buffer_size] = q_sw;
+             buffer[(next_candidates + n_next_candidates++) % buffer_size] = q_nw;
+             buffer[(next_candidates + n_next_candidates++) % buffer_size] = q_se;
+             buffer[(next_candidates + n_next_candidates++) % buffer_size] = q_ne;
          }
        }
+       /* Check finishing conditions */
        err = fabs(total_area - area)/area;
-       if (err < max_error || zoom >= MAX_ZOOM || n == 0) {
-           Py_DECREF(candidate_tiles);
-           Py_DECREF(next_candidates);
+       if (err < max_error || zoom >= MAX_ZOOM || n_next_candidates == 0) {
            break;
        }
+       /* Iterate to the nexe zoom level */
        zoom += 1;
-       Py_DECREF(candidate_tiles);
        candidate_tiles = next_candidates;
+       n_candidate_tiles = n_next_candidates;
     };
     return tiles;
 }
