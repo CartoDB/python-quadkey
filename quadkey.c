@@ -289,15 +289,16 @@ static void append_tile(PyObject* list, uint64 quadint, int zoom) {
     PyList_Append(list, Py_BuildValue("Ki", quadint, zoom));
 }
 
+#define CIRCULAR_INDEX(base, offset, n) ((base + offset) % n)
+
 /*
  * Approximate the area of a bounding box with tiles while limiting the error (as an area ratio)
 */
 PyObject* adaptive_tiling(double xmin, double ymin, double xmax, double ymax, double max_error) {
     static const size_t buffer_size = 10000;
-    static uint64 buffer[buffer_size];
+    static uint64 buffer[buffer_size]; /* circular buffer */
 
     PyObject* tiles = PyList_New(0);
-    Py_ssize_t i;
     uint64 tile_quadint;
     double tile_xmin, tile_ymin, tile_xmax, tile_ymax;
     uint64 q_sw, q_nw, q_se, q_ne;
@@ -308,21 +309,22 @@ PyObject* adaptive_tiling(double xmin, double ymin, double xmax, double ymax, do
     area = box_area(xmin, ymin, xmax, ymax);
 
     size_t candidate_tiles; /* position of candidates in the buffer */
-    size_t next_candidates; /* position of next zoom level candidates */
-    Py_ssize_t n_candidate_tiles, n_next_candidates; /* candidate counters */
+    size_t next_candidates; /* position of to add next zoom level candidates */
+    size_t candidates_end;
 
     /* Start with the root tile as the only candidate */
     zoom = 0;
     candidate_tiles = 0;
     buffer[candidate_tiles] = 0ull;
-    n_candidate_tiles = 1;
+    next_candidates = 1;
 
     for (;;) {
-       next_candidates = (candidate_tiles + n_candidate_tiles) % buffer_size;
-       n_next_candidates = 0;
+       candidates_end = next_candidates;
+       while (candidate_tiles != candidates_end) {
+         /* pop candidate from circular buffer */
+         tile_quadint = buffer[candidate_tiles];
+         candidate_tiles = CIRCULAR_INDEX(candidate_tiles, 1, buffer_size);
 
-       for (i = 0; i < n_candidate_tiles; i++) {
-         tile_quadint = buffer[(candidate_tiles + i) % buffer_size];
          tile2bbox_webmercator(tile_quadint, zoom, &tile_xmin, &tile_ymin, &tile_xmax, &tile_ymax);
          int_area = box_intersection_area(xmin, ymin, xmax, ymax, tile_xmin, tile_ymin, tile_xmax, tile_ymax);
          tile_area = box_area(tile_xmin, tile_ymin, tile_xmax, tile_ymax);
@@ -333,24 +335,31 @@ PyObject* adaptive_tiling(double xmin, double ymin, double xmax, double ymax, do
          } else if (int_area > 0 && zoom < MAX_ZOOM) {
              /* schedule the tile children as next-level candidates  */
              tile_children(tile_quadint, zoom, &q_sw, &q_nw, &q_se, &q_ne);
-             if (n_candidate_tiles - (i+1) + n_next_candidates + 4 >= buffer_size) {
-               break; // buffer full; TODO: report error properly
-             }
-             buffer[(next_candidates + n_next_candidates++) % buffer_size] = q_sw;
-             buffer[(next_candidates + n_next_candidates++) % buffer_size] = q_nw;
-             buffer[(next_candidates + n_next_candidates++) % buffer_size] = q_se;
-             buffer[(next_candidates + n_next_candidates++) % buffer_size] = q_ne;
+             buffer[next_candidates] = q_sw;
+             next_candidates = CIRCULAR_INDEX(next_candidates, 1, buffer_size);
+             if (next_candidates == candidate_tiles)
+                break; // buffer full; TODO: report error properly
+             buffer[next_candidates] = q_nw;
+             next_candidates = CIRCULAR_INDEX(next_candidates, 1, buffer_size);
+             if (next_candidates == candidate_tiles)
+                break; // buffer full; TODO: report error properly
+             buffer[next_candidates] = q_se;
+             next_candidates = CIRCULAR_INDEX(next_candidates, 1, buffer_size);
+             if (next_candidates == candidate_tiles)
+                break; // buffer full; TODO: report error properly
+             buffer[next_candidates] = q_ne;
+             next_candidates = CIRCULAR_INDEX(next_candidates, 1, buffer_size);
+             if (next_candidates == candidate_tiles)
+                break; // buffer full; TODO: report error properly
          }
        }
        /* Check finishing conditions */
        err = fabs(total_area - area)/area;
-       if (err < max_error || zoom >= MAX_ZOOM || n_next_candidates == 0) {
+       if (err < max_error || zoom >= MAX_ZOOM || candidate_tiles == next_candidates) {
            break;
        }
        /* Iterate to the nexe zoom level */
        zoom += 1;
-       candidate_tiles = next_candidates;
-       n_candidate_tiles = n_next_candidates;
     };
     return tiles;
 }
