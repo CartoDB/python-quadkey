@@ -289,6 +289,63 @@ static void append_tile(PyObject* list, uint64 quadint, int zoom) {
     PyList_Append(list, Py_BuildValue("Ki", quadint, zoom));
 }
 
+/*
+ * Approximate the area of a bounding box with tiles while limiting the error (as an area ratio)
+*/
+PyObject* adaptive_tiling(double xmin, double ymin, double xmax, double ymax, double max_error) {
+    /* This is function is slow due to the usage of Python lists as intermediate storage */
+    PyObject* tiles = PyList_New(0);
+    PyObject* next_candidates;
+    PyObject* candidate_tiles = PyList_New(0);
+    Py_ssize_t n, i;
+    PyObject* tile;
+    uint64 tile_quadint;
+    double tile_xmin, tile_ymin, tile_xmax, tile_ymax;
+    uint64 q_sw, q_nw, q_se, q_ne;
+
+    double area, total_area = 0.0, int_area, tile_area, err;
+    int zoom;
+
+    area = box_area(xmin, ymin, xmax, ymax);
+
+    zoom = 0;
+    PyList_Append(candidate_tiles, Py_BuildValue("K", 0ull));
+
+    for (;;) {
+       next_candidates = PyList_New(0);
+       n = PyList_Size(candidate_tiles);
+
+       for (i = 0; i < n; i++) {
+         tile = PyList_GetItem(candidate_tiles, i);
+         PyArg_Parse(tile, "K", &tile_quadint);
+
+         tile2bbox_webmercator(tile_quadint, zoom, &tile_xmin, &tile_ymin, &tile_xmax, &tile_ymax);
+         int_area = box_intersection_area(xmin, ymin, xmax, ymax, tile_xmin, tile_ymin, tile_xmax, tile_ymax);
+         tile_area = box_area(tile_xmin, tile_ymin, tile_xmax, tile_ymax);
+         if (fabs(int_area - tile_area)/tile_area < max_error) {
+             total_area += tile_area;
+             append_tile(tiles, tile_quadint, zoom);
+         } else if (int_area > 0 && zoom < MAX_ZOOM) {
+             tile_children(tile_quadint, zoom, &q_sw, &q_nw, &q_se, &q_ne);
+             PyList_Append(next_candidates, Py_BuildValue("K", q_sw));
+             PyList_Append(next_candidates, Py_BuildValue("K", q_nw));
+             PyList_Append(next_candidates, Py_BuildValue("K", q_se));
+             PyList_Append(next_candidates, Py_BuildValue("K", q_ne));
+         }
+       }
+       err = fabs(total_area - area)/area;
+       if (err < max_error || zoom >= MAX_ZOOM || n == 0) {
+           Py_DECREF(candidate_tiles);
+           Py_DECREF(next_candidates);
+           break;
+       }
+       zoom += 1;
+       Py_DECREF(candidate_tiles);
+       candidate_tiles = next_candidates;
+    };
+    return tiles;
+}
+
 void tiles_intersecting_webmercator_box(PyObject* result, double xmin, double ymin, double xmax, double ymax, uint64 quadint, int zoom, int max_zoom, int mode) {
     double tile_xmin, tile_ymin, tile_xmax, tile_ymax;
     double int_area;
@@ -344,6 +401,18 @@ static PyObject* tiles_intersecting_webmercator_box_py(PyObject* self, PyObject*
     tiles_intersecting_webmercator_box(result, xmin, ymin, xmax, ymax, 0, 0, max_zoom, 1);
     return result;
 }
+
+
+static PyObject* adaptive_tiling_py(PyObject* self, PyObject* args)
+{
+    double xmin, ymin, xmax, ymax, max_err;
+
+    if (!PyArg_ParseTuple(args, "ddddd", &max_err, &xmin, &ymin, &xmax, &ymax))
+        return NULL;
+
+    return adaptive_tiling(xmin, ymin, xmax, ymax, max_err);
+}
+
 
 static PyObject* approximate_box_by_tiles_py(PyObject* self, PyObject* args)
 {
@@ -630,6 +699,7 @@ static PyMethodDef QuadkeyMethods[] =
      {"tile2xyz", tile2xyz_py, METH_VARARGS, "tile2xyz"},
      {"tiles_intersecting_webmercator_box", tiles_intersecting_webmercator_box_py, METH_VARARGS, "tiles_intersecting_webmercator_box"},
      {"approximate_box_by_tiles", approximate_box_by_tiles_py, METH_VARARGS, "approximate_box_by_tiles"},
+     {"adaptive_tiling", adaptive_tiling_py, METH_VARARGS, "adaptive_tiling"},
      {"lonlat2xy", lonlat2xy_py, METH_VARARGS, "lonlat2xy"},
      {"lonlat2quadintxy", lonlat2quadintxy_py, METH_VARARGS, "lonlat2quadintxy"},
      {NULL, NULL, 0, NULL}
