@@ -333,7 +333,7 @@ PyObject* adaptive_tiling(double xmin, double ymin, double xmax, double ymax, do
          } else if (int_area > 0 && zoom < MAX_ZOOM) {
              /* schedule the tile children as next-level candidates  */
              tile_children(tile_quadint, zoom, &q_sw, &q_nw, &q_se, &q_ne);
-             if (n_candidate_tiles + n_next_candidates + 4 >= buffer_size) {
+             if (n_candidate_tiles - (i+1) + n_next_candidates + 4 >= buffer_size) {
                break; // buffer full; TODO: report error properly
              }
              buffer[(next_candidates + n_next_candidates++) % buffer_size] = q_sw;
