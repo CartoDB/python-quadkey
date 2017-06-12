@@ -281,8 +281,175 @@ double box_area(double xmin, double ymin, double xmax, double ymax) {
     return (w > 0) && (h > 0) ? w*h : 0.0;
 }
 
+double disjoint_boxlist_area(PyObject* boxlist) {
+   /* boxlist rectangles must be non-overlapping */
+   Py_ssize_t i, nboxes = PyList_Size(boxlist);
+   PyObject *box;
+   double area = 0.0;
+   double xmin, ymin, xmax, ymax;
+   for (i = 0; i < nboxes; i++) {
+       box = PyList_GetItem(boxlist, i);
+       PyArg_ParseTuple(box, "dddd",  &xmin, &ymin, &xmax, &ymax);
+       area += box_area(xmin, ymin, xmax, ymax);
+   }
+   return area;
+}
+
+void split_boxes(PyObject* box1, PyObject* box2, PyObject* output_list1, PyObject* output_list2) {
+    double xmin1, ymin1, xmax1, ymax1, xmin2, ymin2, xmax2, ymax2;
+    double clip_xmin, clip_ymin, clip_xmax, clip_ymax;
+    PyArg_ParseTuple(box1, "dddd",  &xmin1, &ymin1, &xmax1, &ymax1);
+    PyArg_ParseTuple(box2, "dddd",  &xmin2, &ymin2, &xmax2, &ymax2);
+    if (xmin2 <= xmax1 && xmax2 >= xmin1 && ymin2 <= ymax1 && ymax2 >= ymin1) {
+        /* Intersecting rectangles */
+        if (xmax1 >= xmax2 && xmin1 <= xmin2 && ymax1 >= ymax2 && ymin1 <= ymin2) {
+            /* box1 contains box2 */
+            PyList_Append(output_list1, box1);
+        } else if (xmax1 >= xmax2 && xmin1 <= xmin2 && ymax1 >= ymax2 && ymin1 <= ymin2) {
+            /* box2 contains box1 */
+            PyList_Append(output_list2, box2);
+        } else {
+            /* will remve box2 from box1, getting two or four rectangles */
+            /* TODO: by sorting coordinates we can simplify this */
+            if (xmax1 > xmax2 && xmin1 < xmin2) {
+                /* substract box2 - box1 */
+                clip_xmin = xmin2;
+                clip_xmax = xmax2;
+                if (ymax2 > ymax1) {
+                    clip_ymax = ymax2;
+                    clip_ymin = ymax1;
+                } else {
+                    clip_ymax = ymin1;
+                    clip_ymin = ymin2;
+                }
+                PyList_Append(output_list2, Py_BuildValue("dddd", clip_xmin, clip_ymin, clip_xmax, clip_ymax));
+                PyList_Append(output_list1, box1);
+            } else if (xmax2 > xmax1 && xmin2 < xmin1) {
+                /* substract box1 - box2 */
+                clip_xmin = xmin1;
+                clip_xmax = xmax1;
+                if (ymax1 > ymax2) {
+                    clip_ymax = ymax1;
+                    clip_ymin = ymax2;
+                } else {
+                    clip_ymax = ymin2;
+                    clip_ymin = ymin1;
+                }
+                PyList_Append(output_list1, Py_BuildValue("dddd", clip_xmin, clip_ymin, clip_xmax, clip_ymax));
+                PyList_Append(output_list2, box2);
+            } else if (ymax1 > ymax2 && ymin1 < ymin2) {
+                /* substract box2 - box1 */
+                clip_ymin = ymin2;
+                clip_ymax = ymax2;
+                if (xmax2 > xmax1) {
+                    clip_xmax = xmax2;
+                    clip_xmin = xmax1;
+                } else {
+                    clip_xmax = xmin1;
+                    clip_xmin = xmin2;
+                }
+                PyList_Append(output_list2, Py_BuildValue("dddd", clip_xmin, clip_ymin, clip_xmax, clip_ymax));
+                PyList_Append(output_list1, box1);
+            } else if (ymax2 > ymax1 && ymin2 < ymin1) {
+                /* substract box1 - box2 */
+                clip_ymin = ymin1;
+                clip_ymax = ymax1;
+                if (xmax1 > xmax2) {
+                    clip_xmax = xmax1;
+                    clip_xmin = xmax2;
+                } else {
+                    clip_xmax = xmin2;
+                    clip_xmin = xmin1;
+                }
+                PyList_Append(output_list1, Py_BuildValue("dddd", clip_xmin, clip_ymin, clip_xmax, clip_ymax));
+                PyList_Append(output_list2, box2);
+            } else {
+                if (xmin1 < xmin2 && ymin1 < ymin2) {
+                   PyList_Append(output_list1, Py_BuildValue("dddd", xmin1, ymin1, xmin2, ymin2));
+                   PyList_Append(output_list1, Py_BuildValue("dddd", xmin2, ymin1, xmax1, ymin2));
+                   PyList_Append(output_list1, Py_BuildValue("dddd", xmin1, ymin2, xmin2, ymax1));
+                   PyList_Append(output_list2, box2);
+                } else if (xmin1 < xmin2 && ymax1 > ymax2) {
+                   PyList_Append(output_list1, Py_BuildValue("dddd", xmin1, ymin1, xmin2, ymax2));
+                   PyList_Append(output_list1, Py_BuildValue("dddd", xmin1, ymax2, xmin2, ymax1));
+                   PyList_Append(output_list1, Py_BuildValue("dddd", xmin2, ymax2, xmax1, ymax1));
+                   PyList_Append(output_list2, box2);
+                } else if (xmax1 > xmax2 && ymax1 > ymax2) {
+                   PyList_Append(output_list1, Py_BuildValue("dddd", xmin1, ymax2, xmax2, ymax1));
+                   PyList_Append(output_list1, Py_BuildValue("dddd", xmax2, ymax2, xmax1, ymax1));
+                   PyList_Append(output_list1, Py_BuildValue("dddd", xmax2, ymin1, xmax1, ymax2));
+                   PyList_Append(output_list2, box2);
+                } else { // (xmax1 > xmax2 && ymin1 < ymin2)
+                   PyList_Append(output_list1, Py_BuildValue("dddd", xmin1, ymin1, xmax2, ymin2));
+                   PyList_Append(output_list1, Py_BuildValue("dddd", xmax2, ymin1, xmax1, ymin2));
+                   PyList_Append(output_list1, Py_BuildValue("dddd", xmax2, ymin2, xmax1, ymax1));
+                   PyList_Append(output_list2, box2);
+                }
+            }
+        }
+    } else {
+        /* Non-intersecting rectangles */
+        PyList_Append(output_list1, box1);
+        PyList_Append(output_list2, box2);
+    }
+}
+
 double box_intersection_area(double xmin1, double ymin1, double xmax1, double ymax1, double xmin2, double ymin2, double xmax2, double ymax2) {
     return box_area(MAX(xmin1, xmin2), MAX(ymin1, ymin2), MIN(xmax1, xmax2), MIN(ymax1, ymax2));
+}
+
+double disjoint_boxlist_intersection_area(double xmin, double ymin, double xmax, double ymax, PyObject* boxlist) {
+    // TODO: check if this impacts the performance of adaptive_tiling => convert once to array and use arrays instead of Lists
+    Py_ssize_t i, nboxes = PyList_Size(boxlist);
+    PyObject *intersections = PyList_New(nboxes);
+    PyObject *box;
+    double area;
+    double box_xmin, box_ymin, box_xmax, box_ymax;
+    for (i = 0; i < nboxes; i++) {
+        box = PyList_GetItem(boxlist, i);
+        PyArg_ParseTuple(box, "dddd",  &box_xmin, &box_ymin, &box_xmax, &box_ymax);
+        box_xmin = MAX(box_xmin, xmin);
+        box_ymin = MAX(box_ymin, ymin);
+        box_xmax = MIN(box_xmax, xmax);
+        box_ymax = MIN(box_ymax, ymax);
+        box = Py_BuildValue("dddd", box_xmin, box_ymin, box_xmax, box_ymax);
+        PyList_SetItem(intersections, i, box);
+    }
+    area = disjoint_boxlist_area(intersections);
+    Py_DECREF(intersections);
+    return area;
+}
+
+PyObject* make_disjoint_boxes(PyObject* boxes) {
+    // This is O(n^2)
+    // could be O(n*log(n)), see https://stackoverflow.com/questions/244452/what-is-an-efficient-algorithm-to-find-area-of-overlapping-rectangles
+    Py_ssize_t i, nboxes = PyList_Size(boxes);
+    PyObject* result = PyList_New(0);
+    PyObject* alist = PyList_New(0);
+    PyObject* blist = PyList_New(0);
+    Py_ssize_t j, k;
+
+    PyList_Append(result, PyList_GetItem(boxes, 0));
+
+    for (i = 1; i < nboxes; i++) {
+        PyList_Append(blist, PyList_GetItem(boxes, i));
+        k = 0;
+        for (j = 0; j < PyList_Size(result); j++) {
+            if (k >= PyList_Size(blist))
+                break;
+            split_boxes(PyList_GetItem(result, j), PyList_GetItem(blist, k++),alist,blist);
+        }
+        // result = alist + blist[k:len(blist)]
+        PyObject* tmp = result;
+        result = alist;
+        PyList_SetSlice(result, PyList_Size(result), PyList_Size(result), PyList_GetSlice(blist, k, PyList_Size(blist)));
+        alist = tmp;
+        PyList_SetSlice(alist, 0, PyList_Size(alist), NULL);
+        PyList_SetSlice(blist, 0, PyList_Size(blist), NULL);
+    }
+    Py_DECREF(alist);
+    Py_DECREF(blist);
+    return result;
 }
 
 static void append_tile(PyObject* list, uint64 quadint, int zoom) {
@@ -302,7 +469,8 @@ static void append_tile(PyObject* list, uint64 quadint, int zoom) {
  * (1.0 would always return the root tile since the error for this tile would always be )
  * For approximating an area with tiles use only a max_error and excess_error = 0.0.
 */
-PyObject* adaptive_tiling(double xmin, double ymin, double xmax, double ymax, double max_error, double excess_error) {
+PyObject* adaptive_tiling(PyObject* boxes, double max_error, double excess_error) {
+    /* boxes have to be disjoint: TODO: splitting boxes to make them disjoint */
     static uint64 buffer[ADAPTIVE_TILING_BUFFER_SIZE]; /* circular buffer */
 
     PyObject* tiles = PyList_New(0);
@@ -317,7 +485,7 @@ PyObject* adaptive_tiling(double xmin, double ymin, double xmax, double ymax, do
 
     tile_err =  (excess_error > 0.0) ? excess_error : max_error;
 
-    area = box_area(xmin, ymin, xmax, ymax);
+    area = disjoint_boxlist_area(boxes);
 
     size_t candidate_tiles; /* position of candidates in the buffer */
     size_t next_candidates; /* position of to add next zoom level candidates */
@@ -337,9 +505,9 @@ PyObject* adaptive_tiling(double xmin, double ymin, double xmax, double ymax, do
             candidate_tiles = CIRCULAR_INDEX(candidate_tiles, 1, ADAPTIVE_TILING_BUFFER_SIZE);
 
             tile2bbox_webmercator(tile_quadint, zoom, &tile_xmin, &tile_ymin, &tile_xmax, &tile_ymax);
-            int_area = box_intersection_area(xmin, ymin, xmax, ymax, tile_xmin, tile_ymin, tile_xmax, tile_ymax);
+            int_area = disjoint_boxlist_intersection_area(tile_xmin, tile_ymin, tile_xmax, tile_ymax, boxes);
             tile_area = box_area(tile_xmin, tile_ymin, tile_xmax, tile_ymax);
-            if (fabs(int_area - tile_area)/tile_area < tile_err) {
+            if (fabs(int_area - tile_area) < tile_err*tile_area) {
                 /* add the candidate tile to the results */
                 total_area += tile_area;
                 covered_area += int_area;
@@ -369,12 +537,12 @@ PyObject* adaptive_tiling(double xmin, double ymin, double xmax, double ymax, do
         /* Check finishing conditions */
         if (excess_error > 0.0) {
             // the uncovered area should be within the tolerance (max_error)
-            err = fabs(covered_area - area)/area;
+            err = fabs(covered_area - area);
         } else {
             // the are difference between the tiles and area should be withing tolerance
-            err = fabs(total_area - area)/area;
+            err = fabs(total_area - area);
         }
-        within_tolerance = err < max_error;
+        within_tolerance = err < max_error*area;
         if (covered_area >= area || within_tolerance ||  zoom >= MAX_ZOOM || candidate_tiles == next_candidates) {
             break;
         }
@@ -440,25 +608,29 @@ static PyObject* tiles_intersecting_webmercator_box_py(PyObject* self, PyObject*
     return result;
 }
 
-
 static PyObject* adaptive_tiling_py(PyObject* self, PyObject* args)
 {
-    double xmin, ymin, xmax, ymax, max_err;
-
-    if (!PyArg_ParseTuple(args, "ddddd", &max_err, &xmin, &ymin, &xmax, &ymax))
+    double max_err;
+    PyObject* boxes;
+    if (!PyArg_ParseTuple(args, "dO", &max_err, &boxes))
         return NULL;
+     PyObject* disjoint_boxes = make_disjoint_boxes(boxes);
+     // Py_DECREF(boxes);
 
-    return adaptive_tiling(xmin, ymin, xmax, ymax, max_err, 0.0);
+    return adaptive_tiling(disjoint_boxes, max_err, 0.0);
 }
 
 static PyObject* adaptive_tile_covering_py(PyObject* self, PyObject* args)
 {
-    double xmin, ymin, xmax, ymax, max_err, excess_err;
+    double max_err, excess_err;
+    PyObject* boxes;
 
-    if (!PyArg_ParseTuple(args, "dddddd", &max_err, &excess_err, &xmin, &ymin, &xmax, &ymax))
+    if (!PyArg_ParseTuple(args, "ddO", &max_err, &excess_err, &boxes))
         return NULL;
+     PyObject* disjoint_boxes = make_disjoint_boxes(boxes);
+     // Py_DECREF(boxes);
 
-    return adaptive_tiling(xmin, ymin, xmax, ymax, max_err, excess_err);
+    return adaptive_tiling(disjoint_boxes, max_err, excess_err);
 }
 
 static PyObject* approximate_box_by_tiles_py(PyObject* self, PyObject* args)
@@ -473,7 +645,6 @@ static PyObject* approximate_box_by_tiles_py(PyObject* self, PyObject* args)
     tiles_intersecting_webmercator_box(result, xmin, ymin, xmax, ymax, 0, 0, max_zoom, 2);
     return result;
 }
-
 
 /*
  Input:  integer x y coordinates based on WebMercator in the range [0,2^31)
