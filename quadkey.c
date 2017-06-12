@@ -294,9 +294,15 @@ static void append_tile(PyObject* list, uint64 quadint, int zoom) {
 #define ADAPTIVE_TILING_BUFFER_SIZE 10000
 
 /*
- * Approximate the area of a bounding box with tiles while limiting the error (as an area ratio)
+ * Approximate the area of a bounding box with tiles while limiting the error (as an area ratio).
+ * When excess tolerance is given, max_error is the maximum relative error of defect area and
+ * excess_tolerance is the maximum error of excess area.
+ * For covering (intersecting) use small max_error (so that all area is effectively covered), largish excess_tolerance
+ * (e.g. 0.5 would include tiles which have at least 50% intersected by the area; but note that 0.75 would include all tiles with 25% of its area)
+ * (1.0 would always return the root tile since the error for this tile would always be )
+ * For approximating an area with tiles use only a max_error and excess_error = 0.0.
 */
-PyObject* adaptive_tiling(double xmin, double ymin, double xmax, double ymax, double max_error) {
+PyObject* adaptive_tiling(double xmin, double ymin, double xmax, double ymax, double max_error, double excess_error) {
     static uint64 buffer[ADAPTIVE_TILING_BUFFER_SIZE]; /* circular buffer */
 
     PyObject* tiles = PyList_New(0);
@@ -304,8 +310,12 @@ PyObject* adaptive_tiling(double xmin, double ymin, double xmax, double ymax, do
     double tile_xmin, tile_ymin, tile_xmax, tile_ymax;
     uint64 q_sw, q_nw, q_se, q_ne;
 
-    double area, total_area = 0.0, int_area, tile_area, err;
+    double area, total_area = 0.0, covered_area = 0.0, int_area, tile_area, err;
+    double tile_err;
     int zoom;
+    int within_tolerance;
+
+    tile_err =  (excess_error > 0.0) ? excess_error : max_error;
 
     area = box_area(xmin, ymin, xmax, ymax);
 
@@ -320,47 +330,56 @@ PyObject* adaptive_tiling(double xmin, double ymin, double xmax, double ymax, do
     next_candidates = 1;
 
     for (;;) {
-       candidates_end = next_candidates;
-       while (candidate_tiles != candidates_end) {
-         /* pop candidate from circular buffer */
-         tile_quadint = buffer[candidate_tiles];
-         candidate_tiles = CIRCULAR_INDEX(candidate_tiles, 1, ADAPTIVE_TILING_BUFFER_SIZE);
+        candidates_end = next_candidates;
+        while (candidate_tiles != candidates_end) {
+            /* pop candidate from circular buffer */
+            tile_quadint = buffer[candidate_tiles];
+            candidate_tiles = CIRCULAR_INDEX(candidate_tiles, 1, ADAPTIVE_TILING_BUFFER_SIZE);
 
-         tile2bbox_webmercator(tile_quadint, zoom, &tile_xmin, &tile_ymin, &tile_xmax, &tile_ymax);
-         int_area = box_intersection_area(xmin, ymin, xmax, ymax, tile_xmin, tile_ymin, tile_xmax, tile_ymax);
-         tile_area = box_area(tile_xmin, tile_ymin, tile_xmax, tile_ymax);
-         if (fabs(int_area - tile_area)/tile_area < max_error) {
-             /* add the candidate tile to the results */
-             total_area += tile_area;
-             append_tile(tiles, tile_quadint, zoom);
-         } else if (int_area > 0 && zoom < MAX_ZOOM) {
-             /* schedule the tile children as next-level candidates  */
-             tile_children(tile_quadint, zoom, &q_sw, &q_nw, &q_se, &q_ne);
-             buffer[next_candidates] = q_sw;
-             next_candidates = CIRCULAR_INDEX(next_candidates, 1, ADAPTIVE_TILING_BUFFER_SIZE);
-             if (next_candidates == candidate_tiles)
-                break; // buffer full; TODO: report error properly
-             buffer[next_candidates] = q_nw;
-             next_candidates = CIRCULAR_INDEX(next_candidates, 1, ADAPTIVE_TILING_BUFFER_SIZE);
-             if (next_candidates == candidate_tiles)
-                break; // buffer full; TODO: report error properly
-             buffer[next_candidates] = q_se;
-             next_candidates = CIRCULAR_INDEX(next_candidates, 1, ADAPTIVE_TILING_BUFFER_SIZE);
-             if (next_candidates == candidate_tiles)
-                break; // buffer full; TODO: report error properly
-             buffer[next_candidates] = q_ne;
-             next_candidates = CIRCULAR_INDEX(next_candidates, 1, ADAPTIVE_TILING_BUFFER_SIZE);
-             if (next_candidates == candidate_tiles)
-                break; // buffer full; TODO: report error properly
-         }
-       }
-       /* Check finishing conditions */
-       err = fabs(total_area - area)/area;
-       if (err < max_error || zoom >= MAX_ZOOM || candidate_tiles == next_candidates) {
-           break;
-       }
-       /* Iterate to the nexe zoom level */
-       zoom += 1;
+            tile2bbox_webmercator(tile_quadint, zoom, &tile_xmin, &tile_ymin, &tile_xmax, &tile_ymax);
+            int_area = box_intersection_area(xmin, ymin, xmax, ymax, tile_xmin, tile_ymin, tile_xmax, tile_ymax);
+            tile_area = box_area(tile_xmin, tile_ymin, tile_xmax, tile_ymax);
+            if (fabs(int_area - tile_area)/tile_area < tile_err) {
+                /* add the candidate tile to the results */
+                total_area += tile_area;
+                covered_area += int_area;
+                append_tile(tiles, tile_quadint, zoom);
+            } else if (int_area > 0 && zoom < MAX_ZOOM) {
+                /* schedule the tile children as next-level candidates  */
+                tile_children(tile_quadint, zoom, &q_sw, &q_nw, &q_se, &q_ne);
+                buffer[next_candidates] = q_sw;
+                next_candidates = CIRCULAR_INDEX(next_candidates, 1, ADAPTIVE_TILING_BUFFER_SIZE);
+                if (next_candidates == candidate_tiles)
+                    break; // buffer full; TODO: report error properly
+                buffer[next_candidates] = q_nw;
+                next_candidates = CIRCULAR_INDEX(next_candidates, 1, ADAPTIVE_TILING_BUFFER_SIZE);
+                if (next_candidates == candidate_tiles) {
+                    break; // buffer full; TODO: report error properly
+                }
+                buffer[next_candidates] = q_se;
+                next_candidates = CIRCULAR_INDEX(next_candidates, 1, ADAPTIVE_TILING_BUFFER_SIZE);
+                if (next_candidates == candidate_tiles)
+                    break; // buffer full; TODO: report error properly
+                buffer[next_candidates] = q_ne;
+                next_candidates = CIRCULAR_INDEX(next_candidates, 1, ADAPTIVE_TILING_BUFFER_SIZE);
+                if (next_candidates == candidate_tiles)
+                    break; // buffer full; TODO: report error properly
+            }
+        }
+        /* Check finishing conditions */
+        if (excess_error > 0.0) {
+            // the uncovered area should be within the tolerance (max_error)
+            err = fabs(covered_area - area)/area;
+        } else {
+            // the are difference between the tiles and area should be withing tolerance
+            err = fabs(total_area - area)/area;
+        }
+        within_tolerance = err < max_error;
+        if (covered_area >= area || within_tolerance ||  zoom >= MAX_ZOOM || candidate_tiles == next_candidates) {
+            break;
+        }
+        /* Iterate to the nexe zoom level */
+        zoom += 1;
     };
     return tiles;
 }
@@ -429,9 +448,18 @@ static PyObject* adaptive_tiling_py(PyObject* self, PyObject* args)
     if (!PyArg_ParseTuple(args, "ddddd", &max_err, &xmin, &ymin, &xmax, &ymax))
         return NULL;
 
-    return adaptive_tiling(xmin, ymin, xmax, ymax, max_err);
+    return adaptive_tiling(xmin, ymin, xmax, ymax, max_err, 0.0);
 }
 
+static PyObject* adaptive_tile_covering_py(PyObject* self, PyObject* args)
+{
+    double xmin, ymin, xmax, ymax, max_err, excess_err;
+
+    if (!PyArg_ParseTuple(args, "dddddd", &max_err, &excess_err, &xmin, &ymin, &xmax, &ymax))
+        return NULL;
+
+    return adaptive_tiling(xmin, ymin, xmax, ymax, max_err, excess_err);
+}
 
 static PyObject* approximate_box_by_tiles_py(PyObject* self, PyObject* args)
 {
@@ -719,6 +747,7 @@ static PyMethodDef QuadkeyMethods[] =
      {"tiles_intersecting_webmercator_box", tiles_intersecting_webmercator_box_py, METH_VARARGS, "tiles_intersecting_webmercator_box"},
      {"approximate_box_by_tiles", approximate_box_by_tiles_py, METH_VARARGS, "approximate_box_by_tiles"},
      {"adaptive_tiling", adaptive_tiling_py, METH_VARARGS, "adaptive_tiling"},
+     {"adaptive_tile_covering", adaptive_tile_covering_py, METH_VARARGS, "adaptive_tile_covering"},
      {"lonlat2xy", lonlat2xy_py, METH_VARARGS, "lonlat2xy"},
      {"lonlat2quadintxy", lonlat2quadintxy_py, METH_VARARGS, "lonlat2quadintxy"},
      {NULL, NULL, 0, NULL}
