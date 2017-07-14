@@ -24,7 +24,9 @@ typedef unsigned int uint32;
 #define INV_WM_RANGE (1.0/WM_RANGE)
 #define WM_MAX (M_PI*WEBMERCATOR_R)
 
-static inline uint64 xy2quadint(uint64 x, uint64 y) {
+static inline uint64
+xy2quadint(uint64 x, uint64 y)
+{
 
     static uint64 B[] = { 0x5555555555555555, 0x3333333333333333, 0x0F0F0F0F0F0F0F0F, 0x00FF00FF00FF00FF, 0x0000FFFF0000FFFF };
     static uint64 S[] = { 1, 2, 4, 8, 16 };
@@ -47,7 +49,8 @@ static inline uint64 xy2quadint(uint64 x, uint64 y) {
     return x | (y << 1);
 }
 
-static inline void  quadint2xy(uint64 quadint, uint32* result_x, uint32* result_y)
+static inline void
+quadint2xy(uint64 quadint, uint32* result_x, uint32* result_y)
 {
     static const uint64 B[] = {
         0x5555555555555555, 0x3333333333333333, 0x0F0F0F0F0F0F0F0F, 0x00FF00FF00FF00FF, 0x0000FFFF0000FFFF,
@@ -81,7 +84,9 @@ static inline void  quadint2xy(uint64 quadint, uint32* result_x, uint32* result_
     *result_y = y;
 }
 
-static inline uint64 tile_prefix_mask(int zoom) {
+static inline
+uint64 tile_prefix_mask(int zoom)
+{
     static const uint64 masks[] = {
         0x0ULL,
         0x3000000000000000ULL,
@@ -123,7 +128,9 @@ static inline uint64 tile_prefix_mask(int zoom) {
     return masks[zoom];
 }
 
-static inline uint64 tile_suffix_mask(int zoom) {
+static inline uint64
+tile_suffix_mask(int zoom)
+{
     static const uint64 masks[] = {
         0x3fffffffffffffffULL,
         0xfffffffffffffffULL,
@@ -165,7 +172,9 @@ static inline uint64 tile_suffix_mask(int zoom) {
     return masks[zoom];
 }
 
-void lonlat2xy(double lon, double lat, int zoom, uint32* x, uint32* y) {
+static void
+lonlat2xy(double lon, double lat, int zoom, uint32* x, uint32* y)
+{
 
   lon = MIN(MAX_LONGITUDE, MAX(MIN_LONGITUDE, lon));
   lat = MIN(MAX_LATITUDE, MAX(MIN_LATITUDE, lat));
@@ -181,23 +190,31 @@ void lonlat2xy(double lon, double lat, int zoom, uint32* x, uint32* y) {
   *y = MIN(mapsize - 1, MAX(0, *y));
 }
 
-void xy2webmercator(uint32 x, uint32 y, double* wm_x, double* wm_y) {
+static void
+xy2webmercator(uint32 x, uint32 y, double* wm_x, double* wm_y)
+{
    *wm_x = (x*INV_XY_SCALE - 0.5)*WM_RANGE;
    *wm_y = (0.5 - y*INV_XY_SCALE)*WM_RANGE;
 }
 
-void webmercator2xy(double wm_x, double wm_y, uint32* x, uint32* y) {
+static void
+webmercator2xy(double wm_x, double wm_y, uint32* x, uint32* y)
+{
    *x = (wm_x*INV_WM_RANGE + 0.5)*XY_SCALE;
    *y = (0.5 - wm_y*INV_WM_RANGE)*XY_SCALE;
 }
 
-uint64 lonlat2quadint(double lon, double lat) {
+static uint64
+lonlat2quadint(double lon, double lat)
+{
     uint32 x, y;
     lonlat2xy(lon, lat, MAX_ZOOM, &x, &y);
     return xy2quadint(x, y);
 }
 
-void tile2bbox_scaled(double scale_x, double scale_y, double offset_x, double offset_y, uint64 quadint, int zoom, double* x_min, double* y_min, double* x_max, double* y_max) {
+static void
+tile2bbox_scaled(double scale_x, double scale_y, double offset_x, double offset_y, uint64 quadint, int zoom, double* x_min, double* y_min, double* x_max, double* y_max)
+{
   unsigned int x, y;
   int zero_bits = MAX_ZOOM - zoom;
   quadint2xy(quadint, &x, &y);
@@ -209,11 +226,15 @@ void tile2bbox_scaled(double scale_x, double scale_y, double offset_x, double of
   *y_max = offset_y + (y * 1.0 / (1ull << zoom)) * scale_y;
 }
 
-void tile2bbox_webmercator(uint64 quadint, int zoom, double* x_min, double* y_min, double* x_max, double* y_max) {
+static void
+tile2bbox_webmercator(uint64 quadint, int zoom, double* x_min, double* y_min, double* x_max, double* y_max)
+{
   tile2bbox_scaled(WM_RANGE, -WM_RANGE, -WM_MAX, WM_MAX, quadint, zoom, x_min, y_min, x_max, y_max);
 }
 
-void tile2bbox(uint64 quadint, int zoom, double* lon_min, double* lat_min, double* lon_max, double* lat_max) {
+static void
+tile2bbox(uint64 quadint, int zoom, double* lon_min, double* lat_min, double* lon_max, double* lat_max)
+{
   double x_min, y_min, x_max, y_max;
   tile2bbox_scaled(1.0, 1.0, -0.5, -0.5, quadint, zoom, &x_min, &y_min, &x_max, &y_max);
 
@@ -224,7 +245,9 @@ void tile2bbox(uint64 quadint, int zoom, double* lon_min, double* lat_min, doubl
   *lat_max = 90.0 - 360.0*atan(exp(-2 * M_PI * (-y_max))) / M_PI;
 }
 
-void tile_center_scaled(double scale_x, double scale_y, double offset_x, double offset_y, uint64 quadint, int zoom, double* cx, double* cy) {
+static void
+tile_center_scaled(double scale_x, double scale_y, double offset_x, double offset_y, uint64 quadint, int zoom, double* cx, double* cy)
+{
   unsigned int x, y;
   int zero_bits = MAX_ZOOM - zoom;
   quadint2xy(quadint, &x, &y);
@@ -235,11 +258,15 @@ void tile_center_scaled(double scale_x, double scale_y, double offset_x, double 
   *cy = offset_y + ((y + y + 1) * 1.0 / (1ull << (zoom + 1))) * scale_y;
 }
 
-void tile_center_webmercator(uint64 quadint, int zoom, double* cx, double* cy) {
+static void
+tile_center_webmercator(uint64 quadint, int zoom, double* cx, double* cy)
+{
   tile_center_scaled(WM_RANGE, -WM_RANGE, -WM_MAX, WM_MAX, quadint, zoom, cx, cy);
 }
 
-void tile_center(uint64 quadint, int zoom, double* lon, double* lat) {
+static void
+tile_center(uint64 quadint, int zoom, double* lon, double* lat)
+{
   double x, y;
   tile_center_scaled(1.0, 1.0, -0.5, -0.5, quadint, zoom, &x, &y);
 
@@ -247,13 +274,15 @@ void tile_center(uint64 quadint, int zoom, double* lon, double* lat) {
   *lat = 90.0 - 360.0*atan(exp(-2 * M_PI * (-y))) / M_PI;
 }
 
-void tile2range(uint64 quadint, int zoom, uint64* q_min, uint64* q_max)
+static void
+tile2range(uint64 quadint, int zoom, uint64* q_min, uint64* q_max)
 {
     *q_min = quadint & tile_prefix_mask(zoom);
     *q_max = quadint | tile_suffix_mask(zoom);
 }
 
-void tile_children(uint64 quadint, int zoom, uint64* q_sw, uint64* q_nw, uint64* q_se, uint64* q_ne)
+static void
+tile_children(uint64 quadint, int zoom, uint64* q_sw, uint64* q_nw, uint64* q_se, uint64* q_ne)
 {
     int bit = ((MAX_ZOOM - zoom) << 1);
     *q_sw = quadint & tile_prefix_mask(zoom);
@@ -262,12 +291,16 @@ void tile_children(uint64 quadint, int zoom, uint64* q_sw, uint64* q_nw, uint64*
     *q_ne = *q_se | (1ull << (bit - 2));
 }
 
-uint64 xyz2quadint(uint32 x, uint32 y, int zoom) {
+static uint64
+xyz2quadint(uint32 x, uint32 y, int zoom)
+{
     int bits = MAX_ZOOM - zoom;
     return xy2quadint(x << bits, y << bits);
 }
 
-void tile2xy(uint64 quadint, int zoom, uint32* x, uint32* y) {
+static void
+tile2xy(uint64 quadint, int zoom, uint32* x, uint32* y)
+{
   uint32 qx, qy;
   int bits = MAX_ZOOM - zoom;
   quadint2xy(quadint, &qx, &qy);
@@ -275,13 +308,17 @@ void tile2xy(uint64 quadint, int zoom, uint32* x, uint32* y) {
   *y = qy >> bits;
 }
 
-double box_area(double xmin, double ymin, double xmax, double ymax) {
+static double
+box_area(double xmin, double ymin, double xmax, double ymax)
+{
     double w = xmax - xmin;
     double h = ymax - ymin;
     return (w > 0) && (h > 0) ? w*h : 0.0;
 }
 
-void parse_box(PyObject* box, double* xmin, double* ymin, double* xmax, double* ymax) {
+static void
+parse_box(PyObject* box, double* xmin, double* ymin, double* xmax, double* ymax)
+{
     if (PyObject_TypeCheck(box, &PyList_Type)) {
         *xmin = PyFloat_AsDouble(PyList_GetItem(box, 0));
         *ymin = PyFloat_AsDouble(PyList_GetItem(box, 1));
@@ -293,11 +330,15 @@ void parse_box(PyObject* box, double* xmin, double* ymin, double* xmax, double* 
     }
 }
 
-PyObject* build_box(double xmin, double ymin, double xmax, double ymax) {
+static inline PyObject*
+build_box(double xmin, double ymin, double xmax, double ymax)
+{
     return Py_BuildValue("dddd", xmin, ymin, xmax, ymax);
 }
 
-double disjoint_boxlist_area(PyObject* boxlist) {
+static double
+disjoint_boxlist_area(PyObject* boxlist)
+{
    /* boxlist rectangles must be non-overlapping */
    Py_ssize_t i, nboxes = PyList_Size(boxlist);
    PyObject *box;
@@ -311,7 +352,9 @@ double disjoint_boxlist_area(PyObject* boxlist) {
    return area;
 }
 
-void split_boxes(PyObject* box1, PyObject* box2, PyObject* output_list1, PyObject* output_list2) {
+static void
+split_boxes(PyObject* box1, PyObject* box2, PyObject* output_list1, PyObject* output_list2)
+{
     double xmin1, ymin1, xmax1, ymax1, xmin2, ymin2, xmax2, ymax2;
     double clip_xmin, clip_ymin, clip_xmax, clip_ymax;
     parse_box(box1, &xmin1, &ymin1, &xmax1, &ymax1);
@@ -410,11 +453,15 @@ void split_boxes(PyObject* box1, PyObject* box2, PyObject* output_list1, PyObjec
     }
 }
 
-double box_intersection_area(double xmin1, double ymin1, double xmax1, double ymax1, double xmin2, double ymin2, double xmax2, double ymax2) {
+static double
+box_intersection_area(double xmin1, double ymin1, double xmax1, double ymax1, double xmin2, double ymin2, double xmax2, double ymax2)
+{
     return box_area(MAX(xmin1, xmin2), MAX(ymin1, ymin2), MIN(xmax1, xmax2), MIN(ymax1, ymax2));
 }
 
-double disjoint_boxlist_intersection_area(double xmin, double ymin, double xmax, double ymax, PyObject* boxlist) {
+static double
+disjoint_boxlist_intersection_area(double xmin, double ymin, double xmax, double ymax, PyObject* boxlist)
+{
     // TODO: check if this impacts the performance of adaptive_tiling => convert once to array and use arrays instead of Lists
     Py_ssize_t i, nboxes = PyList_Size(boxlist);
     PyObject *intersections = PyList_New(nboxes);
@@ -436,7 +483,9 @@ double disjoint_boxlist_intersection_area(double xmin, double ymin, double xmax,
     return area;
 }
 
-PyObject* make_disjoint_boxes(PyObject* boxes) {
+static PyObject*
+make_disjoint_boxes(PyObject* boxes)
+{
     // This is O(n^2)
     // could be O(n*log(n)), see https://stackoverflow.com/questions/244452/what-is-an-efficient-algorithm-to-find-area-of-overlapping-rectangles
     // Also this is buggy now: some boxes go away
@@ -471,7 +520,9 @@ PyObject* make_disjoint_boxes(PyObject* boxes) {
     return result;
 }
 
-static void append_tile(PyObject* list, uint64 quadint, int zoom) {
+static void
+append_tile(PyObject* list, uint64 quadint, int zoom)
+{
     PyList_Append(list, Py_BuildValue("Ki", quadint, zoom));
 }
 
@@ -488,7 +539,9 @@ static void append_tile(PyObject* list, uint64 quadint, int zoom) {
  * (1.0 would always return the root tile since the error for this tile would always be )
  * For approximating an area with tiles (tiling) use only a max_error and excess_error = 0.0.
 */
-PyObject* adaptive_tiling(PyObject* boxes, double max_error, double excess_error) {
+static PyObject*
+adaptive_tiling(PyObject* boxes, double max_error, double excess_error)
+{
     /* boxes have to be disjoint: TODO: splitting boxes to make them disjoint */
     static uint64 buffer[ADAPTIVE_TILING_BUFFER_SIZE]; /* circular buffer */
 
@@ -571,7 +624,9 @@ PyObject* adaptive_tiling(PyObject* boxes, double max_error, double excess_error
     return tiles;
 }
 
-void tiles_intersecting_webmercator_boxes(PyObject* result, PyObject* boxes, uint64 quadint, int zoom, int max_zoom, int mode) {
+static void
+tiles_intersecting_webmercator_boxes(PyObject* result, PyObject* boxes, uint64 quadint, int zoom, int max_zoom, int mode)
+{
     double tile_xmin, tile_ymin, tile_xmax, tile_ymax;
     double int_area;
     double tile_area;
@@ -616,7 +671,8 @@ void tiles_intersecting_webmercator_boxes(PyObject* result, PyObject* boxes, uin
     }
 }
 
-static PyObject* tiles_intersecting_webmercator_box_py(PyObject* self, PyObject* args)
+static PyObject*
+tiles_intersecting_webmercator_box_py(PyObject* self, PyObject* args)
 {
     double xmin, ymin, xmax, ymax;
     int max_zoom;
@@ -632,7 +688,8 @@ static PyObject* tiles_intersecting_webmercator_box_py(PyObject* self, PyObject*
     return result;
 }
 
-static PyObject* adaptive_tiling_py(PyObject* self, PyObject* args)
+static PyObject*
+adaptive_tiling_py(PyObject* self, PyObject* args)
 {
     double max_err;
     PyObject* boxes;
@@ -644,7 +701,8 @@ static PyObject* adaptive_tiling_py(PyObject* self, PyObject* args)
     return adaptive_tiling(disjoint_boxes, max_err, 0.0);
 }
 
-static PyObject* adaptive_tile_covering_py(PyObject* self, PyObject* args)
+static PyObject*
+adaptive_tile_covering_py(PyObject* self, PyObject* args)
 {
     double max_err, excess_err;
     PyObject* boxes;
@@ -658,7 +716,8 @@ static PyObject* adaptive_tile_covering_py(PyObject* self, PyObject* args)
     return adaptive_tiling(disjoint_boxes, max_err, excess_err);
 }
 
-static PyObject* approximate_box_by_tiles_py(PyObject* self, PyObject* args)
+static PyObject*
+approximate_box_by_tiles_py(PyObject* self, PyObject* args)
 {
     double xmin, ymin, xmax, ymax;
     int max_zoom;
@@ -674,7 +733,8 @@ static PyObject* approximate_box_by_tiles_py(PyObject* self, PyObject* args)
     return result;
 }
 
-static PyObject* tile_covering_py(PyObject* self, PyObject* args)
+static PyObject*
+tile_covering_py(PyObject* self, PyObject* args)
 {
     PyObject* boxes;
     int max_zoom;
@@ -690,7 +750,8 @@ static PyObject* tile_covering_py(PyObject* self, PyObject* args)
     return result;
 }
 
-static PyObject* tiling_py(PyObject* self, PyObject* args)
+static PyObject*
+tiling_py(PyObject* self, PyObject* args)
 {
     PyObject* boxes;
     int max_zoom;
