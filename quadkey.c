@@ -934,6 +934,17 @@ tile_mask_py(PyObject* self, PyObject* args)
 }
 
 static PyObject*
+tile_suffix_mask_py(PyObject* self, PyObject* args)
+{
+    int zoom;
+
+    if (!PyArg_ParseTuple(args, "i", &zoom))
+        return NULL;
+
+    return Py_BuildValue("K", tile_suffix_mask(zoom));
+}
+
+static PyObject*
 tile_center_webmercator_py(PyObject* self, PyObject* args)
 {
     uint64 quadint;
@@ -1031,6 +1042,7 @@ static PyMethodDef QuadkeyMethods[] =
      {"tile2bbox", tile2bbox_py, METH_VARARGS, "tile2bbox"},
      {"tile2range", tile2range_py, METH_VARARGS, "tile2range"},
      {"tile_mask", tile_mask_py, METH_VARARGS, "tile_mask"},
+     {"tile_suffix_mask", tile_suffix_mask_py, METH_VARARGS, "tile_suffix_mask"},
      {"tile_center_webmercator", tile_center_webmercator_py, METH_VARARGS, "tile_center_webmercator"},
      {"tile_center", tile_center_py, METH_VARARGS, "tile_center"},
      {"tile_children", tile_children_py, METH_VARARGS, "tile_children"},
