@@ -1044,7 +1044,7 @@ lonlat2xy_py(PyObject* self, PyObject* args)
 
 static PyMethodDef QuadkeyMethods[] =
 {
-     {"xy2quadint", xy2quadint_py, METH_VARARGS, "xy2quadint_py"},
+     {"xy2quadint", xy2quadint_py, METH_VARARGS, "xy2quadint"},
      {"quadint2xy", quadint2xy_py, METH_VARARGS, "quadint2xy"},
      {"lonlat2quadint", lonlat2quadint_py, METH_VARARGS, "lonlat2quadint"},
      {"xy2webmercator", xy2webmercator_py, METH_VARARGS, "xy2webmercator"},
