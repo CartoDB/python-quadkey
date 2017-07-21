@@ -869,6 +869,17 @@ webmercator2quadint_py(PyObject* self, PyObject* args)
     return Py_BuildValue("K", xy2quadint(x, y));
 }
 
+static PyObject*
+quadint2xy_py(PyObject* self, PyObject* args)
+{
+    uint64 quadint;
+    if (!PyArg_ParseTuple(args, "K", &quadint))
+        return NULL;
+    uint32 result_x, result_y;
+    quadint2xy(quadint, &result_x, &result_y);
+    return Py_BuildValue("ii", result_x, result_y);
+}
+
 /*
  Input: 62-bit quadkey value
  Output:  web mercator bounding box coordinates (SRID 3857)
@@ -1034,6 +1045,7 @@ lonlat2xy_py(PyObject* self, PyObject* args)
 static PyMethodDef QuadkeyMethods[] =
 {
      {"xy2quadint", xy2quadint_py, METH_VARARGS, "xy2quadint_py"},
+     {"quadint2xy", quadint2xy_py, METH_VARARGS, "quadint2xy"},
      {"lonlat2quadint", lonlat2quadint_py, METH_VARARGS, "lonlat2quadint"},
      {"xy2webmercator", xy2webmercator_py, METH_VARARGS, "xy2webmercator"},
      {"webmercator2xy", webmercator2xy_py, METH_VARARGS, "webmercator2xy"},
