@@ -1068,31 +1068,42 @@ lonlat2xy_py(PyObject* self, PyObject* args)
 
 static PyMethodDef QuadkeyMethods[] =
 {
-     {"xy2quadint", xy2quadint_py, METH_VARARGS, "xy2quadint"},
-     {"quadint2xy", quadint2xy_py, METH_VARARGS, "quadint2xy"},
-     {"lonlat2quadint", lonlat2quadint_py, METH_VARARGS, "lonlat2quadint"},
-     {"xy2webmercator", xy2webmercator_py, METH_VARARGS, "xy2webmercator"},
-     {"webmercator2xy", webmercator2xy_py, METH_VARARGS, "webmercator2xy"},
-     {"webmercator2quadint", webmercator2quadint_py, METH_VARARGS, "webmercator2quadint"},
-     {"tile2bbox_webmercator", tile2bbox_webmercator_py, METH_VARARGS, "tile2bbox_webmercator"},
-     {"tile2bbox", tile2bbox_py, METH_VARARGS, "tile2bbox"},
-     {"tile2range", tile2range_py, METH_VARARGS, "tile2range"},
-     {"tile_mask", tile_mask_py, METH_VARARGS, "tile_mask"},
-     {"tile_suffix_mask", tile_suffix_mask_py, METH_VARARGS, "tile_suffix_mask"},
-     {"tile_center_webmercator", tile_center_webmercator_py, METH_VARARGS, "tile_center_webmercator"},
-     {"tile_center", tile_center_py, METH_VARARGS, "tile_center"},
-     {"tile_children", tile_children_py, METH_VARARGS, "tile_children"},
-     {"xyz2quadint", xyz2quadint_py, METH_VARARGS, "xyz2quadint"},
-     {"tile2xyz", tile2xyz_py, METH_VARARGS, "tile2xyz"},
-     {"tiles_intersecting_webmercator_box", tiles_intersecting_webmercator_box_py, METH_VARARGS, "tiles_intersecting_webmercator_box"},
-     {"approximate_box_by_tiles", approximate_box_by_tiles_py, METH_VARARGS, "approximate_box_by_tiles"},
-     {"adaptive_tiling", adaptive_tiling_py, METH_VARARGS, "adaptive_tiling"},
-     {"adaptive_tile_covering", adaptive_tile_covering_py, METH_VARARGS, "adaptive_tile_covering"},
-     {"tiling", tiling_py, METH_VARARGS, "tiling"},
-     {"tile_covering", tile_covering_py, METH_VARARGS, "tile_covering"},
-     {"lonlat2xy", lonlat2xy_py, METH_VARARGS, "lonlat2xy"},
-     {"lonlat2quadintxy", lonlat2quadintxy_py, METH_VARARGS, "lonlat2quadintxy"},
-     {NULL, NULL, 0, NULL}
+    /* Conversions from WebMercator coordinates in the range [0,2^31) (uint32 x 2) */
+    {"xy2quadint", xy2quadint_py, METH_VARARGS, "xy2quadint"},
+    {"xy2webmercator", xy2webmercator_py, METH_VARARGS, "xy2webmercator"},
+
+    /* Conversions from WebMercator coordinates in the range [0,2^31) (uint32 x 2)
+     * and zoom level (int) */
+    {"xyz2quadint", xyz2quadint_py, METH_VARARGS, "xyz2quadint"},
+
+    /* Conversions from quadint (uint64) */
+    {"quadint2webmercator", quadint2webmercator_py, METH_VARARGS, "quadint2webmercator"},
+    {"quadint2xy", quadint2xy_py, METH_VARARGS, "quadint2xy"},
+
+    /* Conversions from WGS84 (SRID 4326) coordinates (double x 2) */
+    {"lonlat2quadint", lonlat2quadint_py, METH_VARARGS, "lonlat2quadint"},
+    {"lonlat2xy", lonlat2xy_py, METH_VARARGS, "lonlat2xy"},
+    {"lonlat2quadintxy", lonlat2quadintxy_py, METH_VARARGS, "lonlat2quadintxy"},
+
+    /* Conversions from WebMercator (SRID 3857) (double x 2)*/
+    {"webmercator2quadint", webmercator2quadint_py, METH_VARARGS, "webmercator2quadint"},
+    {"webmercator2xy", webmercator2xy_py, METH_VARARGS, "webmercator2xy"},
+
+    {"tile2bbox_webmercator", tile2bbox_webmercator_py, METH_VARARGS, "tile2bbox_webmercator"},
+    {"tile2bbox", tile2bbox_py, METH_VARARGS, "tile2bbox"},
+    {"tile2range", tile2range_py, METH_VARARGS, "tile2range"},
+    {"tile_mask", tile_mask_py, METH_VARARGS, "tile_mask"},
+    {"tile_suffix_mask", tile_suffix_mask_py, METH_VARARGS, "tile_suffix_mask"},
+    {"tile_center_webmercator", tile_center_webmercator_py, METH_VARARGS, "tile_center_webmercator"},     {"tile_center", tile_center_py, METH_VARARGS, "tile_center"},
+    {"tile_children", tile_children_py, METH_VARARGS, "tile_children"},
+    {"tile2xyz", tile2xyz_py, METH_VARARGS, "tile2xyz"},
+    {"tiles_intersecting_webmercator_box", tiles_intersecting_webmercator_box_py, METH_VARARGS, "tiles_intersecting_webmercator_box"},
+    {"approximate_box_by_tiles", approximate_box_by_tiles_py, METH_VARARGS, "approximate_box_by_tiles"},
+    {"adaptive_tiling", adaptive_tiling_py, METH_VARARGS, "adaptive_tiling"},
+    {"adaptive_tile_covering", adaptive_tile_covering_py, METH_VARARGS, "adaptive_tile_covering"},
+    {"tiling", tiling_py, METH_VARARGS, "tiling"},
+    {"tile_covering", tile_covering_py, METH_VARARGS, "tile_covering"},
+    {NULL, NULL, 0, NULL}
 };
 
 PyMODINIT_FUNC

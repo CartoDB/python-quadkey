@@ -19,25 +19,49 @@ The fast technique for quadkey encodig/decoding is taken from https://github.com
 ## Available Methods
 
 Conversion functions:
+
 `xy2quadint(x, y)`
-* Input: x, y coordinates based on WebMercator in the range [0,2^31)
-* Output: quadint value
+* Input:  (uint32) x, y coordinates based on WebMercator in the range [0,2^31)
+* Output: (uint64) quadint value
+
+`xy2webmercator(x, y)`
+* Input:  (uint32) x, y coordinates based on WebMercator in the range [0,2^31)
+* Output: (double) web mercator coordinates (SRID 3857)
+
+`xyz2quadint(x, y)`
+* Input:  (uint32) x, y coordinates based on WebMercator in the range [0,2^31)
+* Input:  (int)    zoom level
+* Output: (uint64) quadint value
+
+`quadint2webmercator(x, y)`
+* Input:  (uint64) quadint value
+* Output: (double) web mercator coordinates (SRID 3857)
 
 `quadint2xy(quadkey)`
-* Input: quadint value
-* Output: x, y coordinates based on WebMercator in the range [0,2^31)
+* Input:  (uint64) quadint value
+* Output: (uint32) x, y coordinates based on WebMercator in the range [0,2^31)
 
 `lonlat2quadint(lon, lat)`
-* Input: longitude, latitude in WGS84 (SRID 4326) coordinates in degrees
-* Output: quadint value
+* Input:  (double) longitude, latitude in WGS84 (SRID 4326) coordinates in degrees
+* Output: (uint64) quadint value
 
-`webmercator2xy(x, y)`
-* Input:  (float) web mercator coordinates (SRID 3857)
-* Output: (int) x, y coordinates based on WebMercator in the range [0,2^31)
+`lonlat2xy(lon, lat)`
+* Input:  (double) longitude, latitude in WGS84 (SRID 4326) coordinates in degrees
+* Output: (uint32) x, y coordinates based on WebMercator in the range [0,2^31)
+
+`lonlat2quadintxy(lon, lat)`
+* Input:  (double) longitude, latitude in WGS84 (SRID 4326) coordinates in degrees
+* Output: (uint64) quadint value
+* Output: (uint32) x, y coordinates based on WebMercator in the range [0,2^31)
 
 `webmercator2quadint(x, y)`
-* Input:  web mercator coordinates (SRID 3857)
-* Output: quadint value
+* Input:  (double) web mercator coordinates (SRID 3857)
+* Output: (uint64) quadint value
+
+`webmercator2xy(x, y)`
+* Input:  (double) web mercator coordinates (SRID 3857)
+* Output: (uint32) x, y coordinates based on WebMercator in the range [0,2^31)
+
 
 Functions to handle tiles (defined by a quadint value and a zoom level)
 
