@@ -197,6 +197,14 @@ xy2webmercator(uint32 x, uint32 y, double* wm_x, double* wm_y)
    *wm_y = (0.5 - y*INV_XY_SCALE)*WM_RANGE;
 }
 
+static inline void
+quadint2webmercator(uint64 quadint, double* wm_x, double* wm_y)
+{
+    uint32 x, y;
+    quadint2xy(quadint, &x, &y);
+    xy2webmercator(x, y, wm_x, wm_y);
+}
+
 static void
 webmercator2xy(double wm_x, double wm_y, uint32* x, uint32* y)
 {
@@ -867,6 +875,22 @@ webmercator2quadint_py(PyObject* self, PyObject* args)
 
     webmercator2xy(wm_x, wm_y, &x, &y);
     return Py_BuildValue("K", xy2quadint(x, y));
+}
+
+/**
+ * Input:  62-bit quadkey value
+ *  Output: web mercator coordinates (SRID 3857)
+ */
+static PyObject*
+quadint2webmercator_py(PyObject* self, PyObject* args)
+{
+    uint64 quadint;
+    if (!PyArg_ParseTuple(args, "K", &quadint))
+        return NULL;
+
+    double wm_x, wm_y;
+    quadint2webmercator(quadint, &wm_x, &wm_y);
+    return Py_BuildValue("dd", wm_x, wm_y);
 }
 
 static PyObject*
