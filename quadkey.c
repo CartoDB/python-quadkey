@@ -311,7 +311,13 @@ double disjoint_boxlist_area(PyObject* boxlist) {
    return area;
 }
 
-void split_boxes(PyObject* box1, PyObject* box2, PyObject* output_list1, PyObject* output_list2) {
+/*
+ * Split two possibly overlapping rectangles into disjoint rectangles.
+ * At most one of the resulting rectangles will not be contained in the first input rectangle.
+ * The resulting rectangles that are contained in the first rectangle are appended to the output list;
+ * the function result is either NULL or the rectangle not contained in the first input rectangle.
+ */
+PyObject* split_boxes(PyObject* box1, PyObject* box2, PyObject* output_list) {
     double xmin1, ymin1, xmax1, ymax1, xmin2, ymin2, xmax2, ymax2;
     double clip_xmin, clip_ymin, clip_xmax, clip_ymax;
     parse_box(box1, &xmin1, &ymin1, &xmax1, &ymax1);
@@ -320,10 +326,11 @@ void split_boxes(PyObject* box1, PyObject* box2, PyObject* output_list1, PyObjec
         /* Intersecting rectangles */
         if (xmax1 >= xmax2 && xmin1 <= xmin2 && ymax1 >= ymax2 && ymin1 <= ymin2) {
             /* box1 contains box2 */
-            PyList_Append(output_list1, box1);
+            PyList_Append(output_list, box1);
+            return NULL;
         } else if (xmax2 >= xmax1 && xmin2 <= xmin1 && ymax2 >= ymax1 && ymin2 <= ymin1) {
             /* box2 contains box1 */
-            PyList_Append(output_list2, box2);
+            return box2;
         } else {
             /* will remve box2 from box1, getting two or four rectangles */
             /* TODO: by sorting coordinates we can simplify this */
@@ -338,8 +345,8 @@ void split_boxes(PyObject* box1, PyObject* box2, PyObject* output_list1, PyObjec
                     clip_ymax = ymin1;
                     clip_ymin = ymin2;
                 }
-                PyList_Append(output_list2, build_box(clip_xmin, clip_ymin, clip_xmax, clip_ymax));
-                PyList_Append(output_list1, box1);
+                PyList_Append(output_list, box1);
+                return build_box(clip_xmin, clip_ymin, clip_xmax, clip_ymax);
             } else if (xmax2 >= xmax1 && xmin2 <= xmin1) {
                 /* substract box1 - box2 */
                 clip_xmin = xmin1;
@@ -351,8 +358,8 @@ void split_boxes(PyObject* box1, PyObject* box2, PyObject* output_list1, PyObjec
                     clip_ymax = ymin2;
                     clip_ymin = ymin1;
                 }
-                PyList_Append(output_list1, build_box(clip_xmin, clip_ymin, clip_xmax, clip_ymax));
-                PyList_Append(output_list2, box2);
+                PyList_Append(output_list, build_box(clip_xmin, clip_ymin, clip_xmax, clip_ymax));
+                return box2;
             } else if (ymax1 >= ymax2 && ymin1 <= ymin2) {
                 /* substract box2 - box1 */
                 clip_ymin = ymin2;
@@ -364,8 +371,8 @@ void split_boxes(PyObject* box1, PyObject* box2, PyObject* output_list1, PyObjec
                     clip_xmax = xmin1;
                     clip_xmin = xmin2;
                 }
-                PyList_Append(output_list2, build_box(clip_xmin, clip_ymin, clip_xmax, clip_ymax));
-                PyList_Append(output_list1, box1);
+                PyList_Append(output_list, box1);
+                return build_box(clip_xmin, clip_ymin, clip_xmax, clip_ymax);
             } else if (ymax2 >= ymax1 && ymin2 <= ymin1) {
                 /* substract box1 - box2 */
                 clip_ymin = ymin1;
@@ -377,36 +384,36 @@ void split_boxes(PyObject* box1, PyObject* box2, PyObject* output_list1, PyObjec
                     clip_xmax = xmin2;
                     clip_xmin = xmin1;
                 }
-                PyList_Append(output_list1, build_box(clip_xmin, clip_ymin, clip_xmax, clip_ymax));
-                PyList_Append(output_list2, box2);
+                PyList_Append(output_list, build_box(clip_xmin, clip_ymin, clip_xmax, clip_ymax));
+                return box2;
             } else {
                 if (xmin1 < xmin2 && ymin1 < ymin2) {
-                   PyList_Append(output_list1, build_box(xmin1, ymin1, xmin2, ymin2));
-                   PyList_Append(output_list1, build_box(xmin2, ymin1, xmax1, ymin2));
-                   PyList_Append(output_list1, build_box(xmin1, ymin2, xmin2, ymax1));
-                   PyList_Append(output_list2, box2);
+                   PyList_Append(output_list, build_box(xmin1, ymin1, xmin2, ymin2));
+                   PyList_Append(output_list, build_box(xmin2, ymin1, xmax1, ymin2));
+                   PyList_Append(output_list, build_box(xmin1, ymin2, xmin2, ymax1));
+                   return box2;
                 } else if (xmin1 < xmin2 && ymax1 > ymax2) {
-                   PyList_Append(output_list1, build_box(xmin1, ymin1, xmin2, ymax2));
-                   PyList_Append(output_list1, build_box(xmin1, ymax2, xmin2, ymax1));
-                   PyList_Append(output_list1, build_box(xmin2, ymax2, xmax1, ymax1));
-                   PyList_Append(output_list2, box2);
+                   PyList_Append(output_list, build_box(xmin1, ymin1, xmin2, ymax2));
+                   PyList_Append(output_list, build_box(xmin1, ymax2, xmin2, ymax1));
+                   PyList_Append(output_list, build_box(xmin2, ymax2, xmax1, ymax1));
+                   return box2;
                 } else if (xmax1 > xmax2 && ymax1 > ymax2) {
-                   PyList_Append(output_list1, build_box(xmin1, ymax2, xmax2, ymax1));
-                   PyList_Append(output_list1, build_box(xmax2, ymax2, xmax1, ymax1));
-                   PyList_Append(output_list1, build_box(xmax2, ymin1, xmax1, ymax2));
-                   PyList_Append(output_list2, box2);
+                   PyList_Append(output_list, build_box(xmin1, ymax2, xmax2, ymax1));
+                   PyList_Append(output_list, build_box(xmax2, ymax2, xmax1, ymax1));
+                   PyList_Append(output_list, build_box(xmax2, ymin1, xmax1, ymax2));
+                   return box2;
                 } else { // (xmax1 > xmax2 && ymin1 < ymin2)
-                   PyList_Append(output_list1, build_box(xmin1, ymin1, xmax2, ymin2));
-                   PyList_Append(output_list1, build_box(xmax2, ymin1, xmax1, ymin2));
-                   PyList_Append(output_list1, build_box(xmax2, ymin2, xmax1, ymax1));
-                   PyList_Append(output_list2, box2);
+                   PyList_Append(output_list, build_box(xmin1, ymin1, xmax2, ymin2));
+                   PyList_Append(output_list, build_box(xmax2, ymin1, xmax1, ymin2));
+                   PyList_Append(output_list, build_box(xmax2, ymin2, xmax1, ymax1));
+                   return box2;
                 }
             }
         }
     } else {
         /* Non-intersecting rectangles */
-        PyList_Append(output_list1, box1);
-        PyList_Append(output_list2, box2);
+        PyList_Append(output_list, box1);
+        return box2;
     }
 }
 
@@ -443,30 +450,33 @@ PyObject* make_disjoint_boxes(PyObject* boxes) {
     Py_ssize_t i, nboxes = PyList_Size(boxes);
     PyObject* result = PyList_New(0);
     PyObject* alist = PyList_New(0);
-    PyObject* blist = PyList_New(0);
-    Py_ssize_t j, k;
+    PyObject* b = NULL;
+    Py_ssize_t j;
+
+    Py_ssize_t max_result_remainder = 0;
 
     PyList_Append(result, PyList_GetItem(boxes, 0));
 
     for (i = 1; i < nboxes; i++) {
-        PyList_Append(blist, PyList_GetItem(boxes, i));
-        k = 0;
-        for (j = 0; j < PyList_Size(result); j++) {
-            if (k >= PyList_Size(blist))
-                break;
-            split_boxes(PyList_GetItem(result, j), PyList_GetItem(blist, k++),alist,blist);
+        b = PyList_GetItem(boxes, i);
+        for (j = 0; j < PyList_Size(result) && b; j++) {
+            printf("i=%lu j=%lu [r: %lu a: %lu\n", i, j, PyList_Size(result),  PyList_Size(alist));
+            b = split_boxes(PyList_GetItem(result, j), b, alist);
         }
-        // result = alist + blist[k:len(blist)]
+        // result = alist + b + result[j:len(result)]
+        max_result_remainder = MAX(max_result_remainder, PyList_Size(result) - j);
         PyObject* tmp = result;
         result = alist;
-        PyList_SetSlice(result, PyList_Size(result), PyList_Size(result), PyList_GetSlice(blist, k, PyList_Size(blist)));
+        if (b) {
+            PyList_Append(result, b);
+        }
         PyList_SetSlice(result, PyList_Size(result), PyList_Size(result), PyList_GetSlice(tmp, j, PyList_Size(tmp)));
         alist = tmp;
         PyList_SetSlice(alist, 0, PyList_Size(alist), NULL);
-        PyList_SetSlice(blist, 0, PyList_Size(blist), NULL);
     }
     Py_DECREF(alist);
-    Py_DECREF(blist);
+
+    printf("rrem %lu\n", max_result_remainder);
 
     return result;
 }
@@ -657,6 +667,16 @@ static PyObject* adaptive_tile_covering_py(PyObject* self, PyObject* args)
 
     return adaptive_tiling(disjoint_boxes, max_err, excess_err);
 }
+
+static PyObject* make_disjoint_boxes_py(PyObject* self, PyObject* args)
+{
+    PyObject* boxes;
+
+    if (!PyArg_ParseTuple(args, "O", &boxes))
+        return NULL;
+     return make_disjoint_boxes(boxes);
+}
+
 
 static PyObject* approximate_box_by_tiles_py(PyObject* self, PyObject* args)
 {
@@ -983,6 +1003,7 @@ static PyMethodDef QuadkeyMethods[] =
      {"tile_covering", tile_covering_py, METH_VARARGS, "tile_covering"},
      {"lonlat2xy", lonlat2xy_py, METH_VARARGS, "lonlat2xy"},
      {"lonlat2quadintxy", lonlat2quadintxy_py, METH_VARARGS, "lonlat2quadintxy"},
+     {"make_disjoint_boxes", make_disjoint_boxes_py, METH_VARARGS, "make_disjoint_boxes"},
      {NULL, NULL, 0, NULL}
 };
 
