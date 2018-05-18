@@ -24,6 +24,14 @@ typedef unsigned int uint32;
 #define INV_WM_RANGE (1.0/WM_RANGE)
 #define WM_MAX (M_PI*WEBMERCATOR_R)
 
+
+#if PY_MAJOR_VERSION >= 3
+#ifndef IS_PY3K
+#define IS_PY3K
+#endif
+#endif
+
+
 static inline uint64
 xy2quadint(uint64 x, uint64 y)
 {
@@ -1106,8 +1114,25 @@ static PyMethodDef QuadkeyMethods[] =
     {NULL, NULL, 0, NULL}
 };
 
+#ifdef IS_PY3K
+static struct PyModuleDef quadkeymodule = {
+    PyModuleDef_HEAD_INIT,
+    "quadkey",   /* name of module */
+    NULL, /* module documentation, may be NULL */
+    -1,       /* size of per-interpreter state of the module,
+                 or -1 if the module keeps state in global variables. */
+    QuadkeyMethods
+};
+
+PyMODINIT_FUNC
+PyInit_quadkey(void)
+{
+    return PyModule_Create(&quadkeymodule);
+}
+#else
 PyMODINIT_FUNC
 initquadkey(void)
 {
-     (void) Py_InitModule("quadkey", QuadkeyMethods);
+    (void) Py_InitModule("quadkey", QuadkeyMethods);
 }
+#endif
