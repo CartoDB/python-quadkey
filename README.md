@@ -5,6 +5,10 @@ This is a small python library to work with quadkeys in a fast way
 
 pip install git+https://github.com/CartoDB/python-quadkey.git
 
+### from source
+
+python -m pip install .
+
 ## how to use it
 
 ```python
