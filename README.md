@@ -28,11 +28,6 @@ Conversion functions:
 * Input:  (uint32) x, y coordinates based on WebMercator in the range [0,2^31)
 * Output: (double) web mercator coordinates (SRID 3857)
 
-`xyz2quadint(x, y)`
-* Input:  (uint32) x, y coordinates based on WebMercator in the range [0,2^31)
-* Input:  (int)    zoom level
-* Output: (uint64) quadint value
-
 `quadint2webmercator(x, y)`
 * Input:  (uint64) quadint value
 * Output: (double) web mercator coordinates (SRID 3857)
