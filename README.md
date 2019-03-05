@@ -22,7 +22,7 @@ The fast technique for quadkey encodig/decoding is taken from https://github.com
 
 ## Available Methods
 
-Conversion functions:
+### Conversion functions:
 
 `xy2quadint(x, y)`
 * Input:  (uint32) x, y coordinates based on WebMercator in the range [0,2^31)
@@ -32,11 +32,11 @@ Conversion functions:
 * Input:  (uint32) x, y coordinates based on WebMercator in the range [0,2^31)
 * Output: (double) web mercator coordinates (SRID 3857)
 
-`quadint2webmercator(x, y)`
+`quadint2webmercator(quadint)`
 * Input:  (uint64) quadint value
 * Output: (double) web mercator coordinates (SRID 3857)
 
-`quadint2xy(quadkey)`
+`quadint2xy(quadint)`
 * Input:  (uint64) quadint value
 * Output: (uint32) x, y coordinates based on WebMercator in the range [0,2^31)
 
@@ -62,7 +62,7 @@ Conversion functions:
 * Output: (uint32) x, y coordinates based on WebMercator in the range [0,2^31)
 
 
-Functions to handle tiles (defined by a quadint value and a zoom level)
+### Functions to handle tiles (defined by a quadint value and a zoom level)
 
 `tile2range(quadint, zoom)`
 
@@ -104,7 +104,7 @@ Functions to handle tiles (defined by a quadint value and a zoom level)
 * Input: zoom level
 * Output: quadint mask to select the significant bits from a zoom level (with bitwise AND)
 
-Conversion of tile representation between quadint, zoom and x, y zoom:
+### Conversion of tile representation between quadint, zoom and x, y zoom:
 
 `xyz2quadint(x, y, zoom)`
 
@@ -116,7 +116,7 @@ Conversion of tile representation between quadint, zoom and x, y zoom:
 * Input: quadint value and zoom level
 * Output: x, y, z of the tile
 
-Obtaning the list of tiles that intersect a web mercator rectangle,
+### Obtaning the list of tiles that intersect a web mercator rectangle,
 given a maximum tile zoom level.
 
 `tiles_intersecting_webmercator_box(max_zoom, xmin, ymin, xmax, ymax)`
