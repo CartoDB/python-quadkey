@@ -18,7 +18,7 @@ print(quadkey.lonlat2quadint(-73.969558715820312, 40.757678985595703)
 ```
 ## Aknowledgments
 
-The fast technique for quadkey encodig/decoding is taken from https://github.com/yinqiwen/geohash-int
+The fast technique for quadkey encoding/decoding is taken from https://github.com/yinqiwen/geohash-int
 
 ## Available Methods
 
