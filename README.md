@@ -28,7 +28,7 @@ The fast technique for quadkey encodig/decoding is taken from https://github.com
 
 ## Available Methods
 
-Note: WebMercator is a cylindrical project which does not include latitudes at the poles.
+Note: WebMercator is a cylindrical projection which does not include latitudes at the poles.
 
 ### Conversion functions:
 
