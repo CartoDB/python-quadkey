@@ -16,11 +16,19 @@ import quadkey
 print(quadkey.lonlat2quadint(-73.969558715820312, 40.757678985595703)
 1013670064444553679
 ```
-## Aknowledgments
+
+### Quadint vs Quadkey
+
+quadints are in base 10, if you need the _quadkey_, transform the resuting quadint into base 4,
+then take the first n digits corresponding to the required zoom level on the tile.
+
+## Acknowledgments
 
 The fast technique for quadkey encodig/decoding is taken from https://github.com/yinqiwen/geohash-int
 
 ## Available Methods
+
+Note: WebMercator is a cylindrical project which does not include latitudes at the poles.
 
 Conversion functions:
 
