@@ -31,6 +31,10 @@ typedef unsigned int uint32;
 #endif
 #endif
 
+#ifndef M_PI
+    #define M_PI 3.14159265358979323846
+#endif
+
 
 static inline uint64
 xy2quadint(uint64 x, uint64 y)
